@@ -111,3 +111,4 @@
   "include": ["src/**/*"],      // Sertakan semua file dalam folder src
   "exclude": ["node_modules"]   // Kecualikan folder node_modules
 }
+
