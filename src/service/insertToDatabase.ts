@@ -10,11 +10,20 @@ export const insertToDatabase = async (data: any[], tableName: string) => {
         for (const row of data) {
             try {
                 const { id_produk, kuota, alias, deskripsi } = row;
-                const jenis = row.nama_paket;
-                const masaaktif = row.masa_aktif;
+                const jenis = row.nama_paket || "";
+                const masaaktif = row.masa_aktif || "";
 
                 // Pastikan id_produk adalah string
                 const idProdukString = String(id_produk);
+
+                // Validasi panjang data
+                if (jenis.length > 60) {
+                    throw new Error(`Data jenis "${jenis}" terlalu panjang, maksimal 60 karakter.`);
+                }
+
+                if (idProdukString.length > 20) {
+                    throw new Error(`Data id_produk "${idProdukString}" terlalu panjang, maksimal 60 karakter.`);
+                }
 
                 // Tentukan kolom yang akan di-insert atau di-update
                 const columns = '"id_produk", "jenis", deskripsi, kuota, masaaktif, alias';
@@ -39,8 +48,10 @@ export const insertToDatabase = async (data: any[], tableName: string) => {
 
                 // Periksa apakah operasi adalah insert atau update berdasarkan nilai xmax
                 if (result.rows[0]?.xmax === 0) {
+                    console.log(chalk.green(`insert ke ${insertCount} berhasil`));
                     insertCount++;
                 } else {
+                    console.log(chalk.blue(`update ke ${updateCount} berhasil`));
                     updateCount++;
                 }
             } catch (error) {
