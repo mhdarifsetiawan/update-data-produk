@@ -39,3 +39,27 @@ Configuration for .env file
 | DB_NAME                 | sc              |                                    |
 |   |   |
 
+
+### config.json
+
+Configuration for config.json
+```
+- create file ./src/config/config.json
+```
+example value:
+```
+{
+    "tableName": "TABLE_NAME",
+    "allowedColumns": ["column_1", "column_2", "column_3"],
+    "columnInExcel": ["column_1", "column_2", "column_3"],
+    "columnLengths": [
+      { "column": "column_1", "maxLength": 60 },
+      { "column": "column_2", "maxLength": 40 },
+      { "column": "column_3", "maxLength": 20 }
+    ],
+    "conflictColumn": {
+        "column": "column_1",
+        "type": "unique"
+      }
+  }
+```

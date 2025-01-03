@@ -1,14 +1,17 @@
-import { closeDBConnection, getDBConnection } from "./helpers/db";
+import chalk from "chalk";
+import { closeDBConnection } from "./helpers/db";
+import { excelFile, tableName } from "./helpers/utils";
 import { insertToDatabase } from "./service/insertToDatabase";
 import { readExcelFile } from "./service/readExcelFile";
 
 const main = async () => {
     try {
-        const readFile = await readExcelFile("data.xlsx");
+        console.log(chalk.bgYellow(`============ Process Start ============`));
+        const readFile = await readExcelFile(excelFile);
         if (readFile) {
-            const insertTodatabase = await insertToDatabase(readFile, "smartcash.mt_produk_pulsa")
+            const insertTodatabase = await insertToDatabase(readFile, tableName)
             if (insertTodatabase) {
-                console.log(`beres bossss`);
+                console.log(chalk.bgYellow(`============ Process Ended ============`));
             }
         }
     } finally {
@@ -16,4 +19,4 @@ const main = async () => {
     }
 };
 
-main().catch((err) => console.error("Terjadi kesalahan di aplikasi utama:", err));
+main().catch((err) => console.error("Something wrong:", err));

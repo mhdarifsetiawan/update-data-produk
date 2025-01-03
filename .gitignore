@@ -33,3 +33,6 @@ Thumbs.db
 #other
 *.csv
 *.xlsx
+*.zip
+*.json
+*.txt

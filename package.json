@@ -4,7 +4,7 @@
   "description": "scripts for read csv, and insert/update all to database",
   "main": "index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && mkdir -p dist/config && cp src/config/config.json dist/config/config.json",
     "start": "node dist/index.js",
     "dev": "ts-node src/index.ts",
     "gas": "npm run build && npm run start"

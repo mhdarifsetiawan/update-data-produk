@@ -1,69 +1,70 @@
 import chalk from "chalk";
 import { getDBConnection } from "../helpers/db";
+import { allowedColumns, columnLengths, conflictColumn, mapDataToDatabase } from "../helpers/utils";
+import { writeLog } from "../helpers/writeLogLocal";
 
-export const insertToDatabase = async (data: any[], tableName: string) => {
+type RowData = {
+    [key: string]: any;
+};
+
+type ColumnLength = {
+    column: string;
+    maxLength: number;
+};
+
+export const insertToDatabase = async (data: RowData[], tableName: string) => {
     try {
-        const pool = await getDBConnection(); // Pastikan koneksi berhasil sebelum melanjutkan
+        const pool = await getDBConnection();
         let insertCount = 0;
         let updateCount = 0;
 
         for (const row of data) {
             try {
-                const { id_produk, kuota, alias, deskripsi } = row;
-                const jenis = row.nama_paket || "";
-                const masaaktif = row.masa_aktif || "";
-
-                // Pastikan id_produk adalah string
-                const idProdukString = String(id_produk);
-
-                // Validasi panjang data
-                if (jenis.length > 60) {
-                    throw new Error(`Data jenis "${jenis}" terlalu panjang, maksimal 60 karakter.`);
+                // Validate length data, You can delete it if you don't need it
+                for (const columnLength of columnLengths as ColumnLength[]) {
+                    if (String(row[columnLength.column]).length > columnLength.maxLength) {
+                        throw new Error(`Data ${columnLength.column} "${row[columnLength.column]}" is too long, maximum ${columnLength.maxLength} characters.`);
+                    }
                 }
 
-                if (idProdukString.length > 20) {
-                    throw new Error(`Data id_produk "${idProdukString}" terlalu panjang, maksimal 60 karakter.`);
-                }
-
-                // Tentukan kolom yang akan di-insert atau di-update
-                const columns = '"id_produk", "jenis", deskripsi, kuota, masaaktif, alias';
-                const values = [idProdukString, jenis, deskripsi, kuota, masaaktif, alias];
+                // Map data Excel ke kolom database
+                const mappedRow = mapDataToDatabase(row);
                 
-                // Query dengan ON CONFLICT untuk melakukan update jika id_produk sudah ada
+                const columns = allowedColumns.map((key: string) => `"${key}"`).join(', ');
+                const values = allowedColumns.map((key: string) => mappedRow[key]);
+
+                // Execute the query and get the response
                 const query = `
                     INSERT INTO ${tableName} (${columns})
-                    VALUES ($1, $2, $3, $4, $5, $6)
-                    ON CONFLICT ("id_produk") 
+                    VALUES (${values.map((_value: any, index: number) => `$${index + 1}`).join(', ')})
+                    ON CONFLICT (${conflictColumn.column})
                     DO UPDATE SET 
-                        "jenis" = EXCLUDED."jenis", 
-                        deskripsi = EXCLUDED.deskripsi,
-                        kuota = EXCLUDED.kuota,
-                        masaaktif = EXCLUDED.masaaktif,
-                        alias = EXCLUDED.alias
+                        ${allowedColumns.map((key: string) => `"${key}" = EXCLUDED."${key}"`).join(', ')}
                     RETURNING xmax
                 `;
 
-                // Jalankan query dan dapatkan respons
+                // Run the query and get the response
                 const result = await pool.query(query, values);
 
-                // Periksa apakah operasi adalah insert atau update berdasarkan nilai xmax
+                // Check if the operation is an insert or update based on the xmax value
                 if (result.rows[0]?.xmax === 0) {
-                    console.log(chalk.green(`insert ke ${insertCount} berhasil`));
+                    console.log(chalk.green(`Insert row ${insertCount} successful`));
                     insertCount++;
                 } else {
-                    console.log(chalk.blue(`update ke ${updateCount} berhasil`));
+                    console.log(chalk.blue(`update row ${updateCount} successful`));
                     updateCount++;
                 }
-            } catch (error) {
-                console.error(`Gagal mengunggah baris: ${JSON.stringify(row)}`, error);
+            } catch (error: any) {
+                console.error(`Failed to upload row: ${JSON.stringify(row)}`, error);
+                writeLog(`Gagal upload row: ${JSON.stringify(row)} - ${error.message}`);
             }
         }
 
-        console.log(chalk.green(`Berhasil mengunggah ${insertCount} baris baru ke tabel ${tableName}.`));
-        console.log(chalk.blue(`Berhasil memperbarui ${updateCount} baris di tabel ${tableName}.`));
-        return { insertCount, updateCount }; // Kembalikan jumlah data yang berhasil di-insert dan di-update
+        console.log(chalk.green(`Successfully uploaded ${insertCount} new rows to table ${tableName}.`));
+        console.log(chalk.green(`Successfully updated ${updateCount} rows in table ${tableName}.`));
+        return { insertCount, updateCount }; // Return the number of rows inserted and updated
     } catch (error) {
-        console.error("Koneksi ke database gagal:", error);
-        return { insertCount: 0, updateCount: 0 }; // Jika koneksi gagal, tidak ada baris yang di-insert atau di-update
+        console.error("Database connection failed:", error);
+        return { insertCount: 0, updateCount: 0 }; // If the connection fails, no rows are inserted or updated
     }
 };
